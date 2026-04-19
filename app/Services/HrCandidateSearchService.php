@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\CandidateDocument;
 use App\Models\Organization;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -16,13 +16,25 @@ class HrCandidateSearchService
     ) {}
 
     /**
-     * @return Collection<int, CandidateDocument>
+     * @return EloquentCollection<int, CandidateDocument>
      */
-    public function search(Organization $organization, string $query, int $limit = 15): Collection
+    public function search(Organization $organization, string $query, int $limit = 15): EloquentCollection
+    {
+        $documents = collect($this->searchWithScores($organization, $query, $limit))
+            ->pluck('document')
+            ->all();
+
+        return new EloquentCollection($documents);
+    }
+
+    /**
+     * @return list<array{document: CandidateDocument, score: float|null}>
+     */
+    public function searchWithScores(Organization $organization, string $query, int $limit = 15): array
     {
         $query = trim($query);
         if ($query === '') {
-            return new Collection;
+            return [];
         }
 
         if ($this->openai->isConfigured() && $this->pinecone->isConfigured()) {
@@ -33,51 +45,68 @@ class HrCandidateSearchService
                 ];
                 $matches = $this->pinecone->query($vector, $limit, null, $filter);
 
-                $ids = [];
+                $idScores = [];
                 foreach ($matches as $match) {
                     $meta = $match['metadata'] ?? [];
                     if (isset($meta['candidate_document_id']) && is_numeric($meta['candidate_document_id'])) {
-                        $ids[] = (int) $meta['candidate_document_id'];
+                        $id = (int) $meta['candidate_document_id'];
+                        $idScores[$id] = $match['score'];
                     }
                 }
 
-                if ($ids === []) {
-                    return new Collection;
+                if ($idScores === []) {
+                    return [];
                 }
 
-                return CandidateDocument::query()
+                $ids = array_keys($idScores);
+                $documents = CandidateDocument::query()
                     ->whereIn('id', $ids)
                     ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
                     ->with('candidate')
                     ->get()
-                    ->sortBy(fn (CandidateDocument $doc) => array_search($doc->id, $ids, true))
-                    ->values();
+                    ->keyBy('id');
+
+                $ordered = [];
+                foreach ($ids as $id) {
+                    $doc = $documents->get($id);
+                    if ($doc !== null) {
+                        $ordered[] = [
+                            'document' => $doc,
+                            'score' => $idScores[$id] ?? null,
+                        ];
+                    }
+                }
+
+                return $ordered;
             } catch (Throwable $e) {
                 Log::warning('hr_search.vector_failed', ['message' => $e->getMessage()]);
             }
         }
 
-        return $this->keywordFallback($organization, $query, $limit);
+        return $this->keywordFallbackWithScores($organization, $query, $limit);
     }
 
     /**
-     * @return Collection<int, CandidateDocument>
+     * @return list<array{document: CandidateDocument, score: float|null}>
      */
-    private function keywordFallback(Organization $organization, string $query, int $limit): Collection
+    private function keywordFallbackWithScores(Organization $organization, string $query, int $limit): array
     {
         $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query);
         $needle = '%'.$escaped.'%';
 
-        return CandidateDocument::query()
+        $documents = CandidateDocument::query()
             ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
-            ->whereNotNull('extracted_text')
-            ->where(function ($q) use ($needle): void {
-                $q->where('extracted_text', 'like', $needle)
-                    ->orWhere('original_name', 'like', $needle);
-            })
+            ->where('original_name', 'like', $needle)
             ->with('candidate')
             ->latest('updated_at')
             ->limit($limit)
             ->get();
+
+        $out = [];
+        foreach ($documents as $document) {
+            $out[] = ['document' => $document, 'score' => null];
+        }
+
+        return $out;
     }
 }

@@ -6,7 +6,7 @@
 
 | Piece | Role |
 |--------|------|
-| **Laravel + MySQL/SQLite** | Source of truth: agencies (`organizations`), HR users, candidates, **file paths**, **extracted text**, **processing status**, **Pinecone vector id**. |
+| **Laravel + MySQL/SQLite** | Source of truth: agencies (`organizations`), HR users, candidates, **object storage paths** (CV + extracted text), **processing status**, **Pinecone vector id**. |
 | **OpenAI Embeddings** | Turns CV text and HR questions into **dense vectors** (arrays of floats). |
 | **Pinecone** | **Vector index** optimized for similarity search at scale; not a replacement for SQL. |
 
@@ -74,8 +74,8 @@ Relational rows stay in **`candidates`** and **`candidate_documents`**.
 
 ## Next implementation steps (suggested order)
 
-1. **`ProcessCvUploadJob`** (implemented): queued job extracts text (PDF via `smalot/pdfparser`, DOCX via ZIP/`document.xml`), then if `OPENAI_API_KEY` **and** Pinecone envs are set, embeds and **upserts** to Pinecone; otherwise marks the row **`ready`** with text only (keyword search still works).
-2. **HR search** (`POST /dashboard/search`): uses **`HrCandidateSearchService`** — Pinecone + OpenAI when configured (metadata filter `organization_id`); otherwise **SQL `LIKE`** on `extracted_text` / filename.
+1. **`ProcessCvUploadJob`** (implemented): queued job downloads the CV from object storage to a temp file, extracts text (PDF via `smalot/pdfparser`, DOCX via ZIP/`document.xml`), stores extracted text back to object storage (`extracted_text_path`), then if `OPENAI_API_KEY` **and** Pinecone envs are set, embeds and **upserts** to Pinecone; otherwise marks the row **`ready`** with a note that semantic search needs Pinecone/OpenAI.
+2. **HR search** (`POST /dashboard/search`): uses **`HrCandidateSearchService`** — Pinecone + OpenAI when configured (metadata filter `organization_id`); otherwise a simple **filename keyword** match (CV text is not stored in SQL).
 3. Run a **queue worker** when `QUEUE_CONNECTION=database` (or Redis): `php artisan queue:work` so uploads process in the background.
 
 This document is the **bridge** between the product spec (`PROJECT_REQUIREMENTS.md`) and the code under `app/Services` + `config/pinecone.php`.

@@ -26,7 +26,7 @@ class CandidateDocumentFactory extends Factory
             'path' => 'cvs/test.pdf',
             'mime' => 'application/pdf',
             'size_bytes' => 1024,
-            'extracted_text' => null,
+            'extracted_text_path' => null,
             'processing_status' => CandidateDocumentProcessingStatus::Ready,
             'pinecone_vector_id' => null,
             'embedding_model' => null,

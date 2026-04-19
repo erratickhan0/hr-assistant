@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\CandidateDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /*
@@ -44,7 +47,59 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function fakeVectorSearchStack(): void
 {
-    // ..
+    Config::set('openai.api_key', 'test-openai-key');
+    Config::set('openai.embedding_model', 'text-embedding-3-small');
+    Config::set('pinecone.api_key', 'test-pinecone-key');
+    Config::set('pinecone.index_host', 'test-index-host.pinecone.io');
+
+    Http::fake(function ($request) {
+        $url = (string) $request->url();
+
+        if (str_contains($url, 'api.openai.com/v1/embeddings')) {
+            return Http::response([
+                'data' => [
+                    [
+                        'embedding' => array_fill(0, 1536, 0.01),
+                    ],
+                ],
+            ], 200);
+        }
+
+        if (str_contains($url, '/query')) {
+            $payload = $request->data();
+            $filter = is_array($payload) ? ($payload['filter'] ?? null) : null;
+
+            $orgId = null;
+            if (is_array($filter) && isset($filter['organization_id']['$eq'])) {
+                $orgId = (int) $filter['organization_id']['$eq'];
+            }
+
+            $matches = [];
+            if ($orgId !== null) {
+                $documents = CandidateDocument::query()
+                    ->whereHas('candidate', fn ($q) => $q->where('organization_id', $orgId))
+                    ->orderBy('id')
+                    ->get(['id']);
+
+                foreach ($documents as $document) {
+                    $matches[] = [
+                        'id' => 'org-'.$orgId.'-doc-'.$document->id,
+                        'score' => 0.9,
+                        'metadata' => [
+                            'organization_id' => $orgId,
+                            'candidate_document_id' => $document->id,
+                        ],
+                    ];
+                }
+            }
+
+            return Http::response([
+                'matches' => $matches,
+            ], 200);
+        }
+
+        return Http::response([], 404);
+    });
 }

@@ -36,7 +36,7 @@
             <h2 class="text-lg font-medium text-white">Search CVs</h2>
             <p class="mt-1 text-sm text-slate-400">
                 Uses <strong class="text-slate-200">Pinecone + OpenAI embeddings</strong> when configured; otherwise a simple
-                <strong class="text-slate-200">keyword</strong> match on extracted text.
+                <strong class="text-slate-200">filename keyword</strong> match (CV text is stored in object storage, not SQL).
             </p>
             <form method="POST" action="{{ route('hr.search') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
                 @csrf
@@ -72,11 +72,6 @@
                                     {{ $doc->candidate?->display_name ?: 'Candidate' }}
                                     <span class="text-slate-500">· {{ $doc->original_name }}</span>
                                 </p>
-                                @if ($doc->extracted_text)
-                                    <p class="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-400">
-                                        {{ \Illuminate\Support\Str::limit($doc->extracted_text, 320) }}
-                                    </p>
-                                @endif
                             </li>
                         @endforeach
                     </ul>

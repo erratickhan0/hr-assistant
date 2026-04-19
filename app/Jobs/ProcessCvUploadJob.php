@@ -14,6 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Throwable;
 
 class ProcessCvUploadJob implements ShouldQueue
@@ -43,10 +44,20 @@ class ProcessCvUploadJob implements ShouldQueue
         ])->save();
 
         try {
-            $absolutePath = Storage::disk($document->disk)->path($document->path);
-            $text = $textExtraction->extract($absolutePath, $document->mime);
+            $disk = Storage::disk($document->disk);
+            $cvTempPath = tempnam(sys_get_temp_dir(), 'cv_upload_');
+            if ($cvTempPath === false) {
+                throw new \RuntimeException('Could not create a temporary file for CV processing.');
+            }
 
-            $document->forceFill(['extracted_text' => $text])->save();
+            try {
+                file_put_contents($cvTempPath, $disk->get($document->path));
+                $text = $textExtraction->extract($cvTempPath, $document->mime);
+            } finally {
+                if (is_file($cvTempPath)) {
+                    @unlink($cvTempPath);
+                }
+            }
 
             if ($text === '') {
                 $document->forceFill([
@@ -57,11 +68,27 @@ class ProcessCvUploadJob implements ShouldQueue
                 return;
             }
 
+            $extractedRelativePath = sprintf(
+                'extracted/organization-%d/doc-%d-%s.txt',
+                (int) $document->candidate->organization_id,
+                (int) $document->id,
+                (string) Str::uuid(),
+            );
+
+            $disk->put($extractedRelativePath, $text, [
+                'visibility' => 'private',
+                'ContentType' => 'text/plain; charset=UTF-8',
+            ]);
+
+            $document->forceFill([
+                'extracted_text_path' => $extractedRelativePath,
+            ])->save();
+
             if (! $openai->isConfigured() || ! $pinecone->isConfigured()) {
                 $document->forceFill([
                     'processing_status' => CandidateDocumentProcessingStatus::Ready,
                     'pinecone_vector_id' => null,
-                    'last_error' => null,
+                    'last_error' => 'OpenAI/Pinecone not configured — extracted text stored on object storage only.',
                 ])->save();
 
                 return;

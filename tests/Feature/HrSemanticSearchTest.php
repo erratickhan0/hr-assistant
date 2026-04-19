@@ -10,11 +10,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 
 test('hr can keyword search extracted cv text', function () {
+    fakeVectorSearchStack();
+
     $organization = Organization::factory()->create();
     $user = User::factory()->for($organization)->create();
     $candidate = Candidate::factory()->for($organization)->create();
     CandidateDocument::factory()->for($candidate)->create([
-        'extracted_text' => 'Senior Laravel engineer with AWS experience',
+        'original_name' => 'Senior-Laravel-engineer-resume.pdf',
         'processing_status' => CandidateDocumentProcessingStatus::Ready,
     ]);
 
@@ -26,7 +28,7 @@ test('hr can keyword search extracted cv text', function () {
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('Senior Laravel', false);
+        ->assertSee('Senior-Laravel-engineer-resume.pdf', false);
 });
 
 test('cv upload dispatches processing job', function () {

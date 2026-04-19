@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * @property string $path
  * @property string $mime
  * @property int $size_bytes
- * @property string|null $extracted_text
+ * @property string|null $extracted_text_path
  * @property CandidateDocumentProcessingStatus $processing_status
  * @property string|null $pinecone_vector_id
  * @property string|null $embedding_model
@@ -37,7 +37,7 @@ class CandidateDocument extends Model
         'path',
         'mime',
         'size_bytes',
-        'extracted_text',
+        'extracted_text_path',
         'processing_status',
         'pinecone_vector_id',
         'embedding_model',

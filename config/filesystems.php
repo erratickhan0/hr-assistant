@@ -52,8 +52,13 @@ return [
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
+            // Prefer an access point ARN here when using S3 Access Points:
+            // arn:aws:s3:REGION:ACCOUNT_ID:accesspoint/AP_NAME
+            // Otherwise use the bucket name.
+            'bucket' => env('AWS_BUCKET_ACCESS_POINT_ARN', env('AWS_BUCKET')),
+            // Optional public base URL for Storage::url() (often CloudFront or a static site domain).
             'url' => env('AWS_URL'),
+            // Optional custom S3-compatible endpoint (MinIO, LocalStack, etc.). Leave empty for real AWS.
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,

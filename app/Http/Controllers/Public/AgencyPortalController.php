@@ -24,7 +24,8 @@ class AgencyPortalController extends Controller
     public function store(StoreCandidateCvRequest $request, Organization $organization): RedirectResponse
     {
         $file = $request->file('cv');
-        $path = $file->store("cvs/organization-{$organization->id}", 'local');
+        $disk = (string) config('filesystems.default', 'local');
+        $path = $file->store("cvs/organization-{$organization->id}", $disk);
 
         $candidate = Candidate::query()->create([
             'organization_id' => $organization->id,
@@ -38,11 +39,11 @@ class AgencyPortalController extends Controller
         $document = CandidateDocument::query()->create([
             'candidate_id' => $candidate->id,
             'original_name' => $file->getClientOriginalName(),
-            'disk' => 'local',
+            'disk' => $disk,
             'path' => $path,
             'mime' => (string) $file->getMimeType(),
             'size_bytes' => $file->getSize() ?: 0,
-            'extracted_text' => null,
+            'extracted_text_path' => null,
             'processing_status' => CandidateDocumentProcessingStatus::Pending,
             'pinecone_vector_id' => null,
             'embedding_model' => null,

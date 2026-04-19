@@ -44,18 +44,20 @@
                         </button>
                     </form>
                 @else
-                    <a
-                        href="{{ route('login') }}"
-                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                    >
-                        Log in
-                    </a>
-                    <a
-                        href="{{ route('register') }}"
-                        class="rounded-md bg-emerald-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-emerald-400"
-                    >
-                        Create agency
-                    </a>
+                    @unless (View::hasSection('hide_guest_auth_links'))
+                        <a
+                            href="{{ route('login') }}"
+                            class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                        >
+                            Log in
+                        </a>
+                        <a
+                            href="{{ route('register') }}"
+                            class="rounded-md bg-emerald-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-emerald-400"
+                        >
+                            Create agency
+                        </a>
+                    @endunless
                 @endauth
             </nav>
         </div>
