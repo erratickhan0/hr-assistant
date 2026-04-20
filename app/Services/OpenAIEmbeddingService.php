@@ -25,14 +25,21 @@ class OpenAIEmbeddingService
         }
 
         $model = (string) config('openai.embedding_model');
+        $dimensions = (int) config('openai.embedding_dimensions', 512);
         $truncated = Str::limit($input, 28_000, '');
+
+        $payload = [
+            'model' => $model,
+            'input' => $truncated,
+        ];
+
+        if ($dimensions > 0) {
+            $payload['dimensions'] = $dimensions;
+        }
 
         $response = Http::withToken((string) config('openai.api_key'))
             ->timeout(120)
-            ->post('https://api.openai.com/v1/embeddings', [
-                'model' => $model,
-                'input' => $truncated,
-            ]);
+            ->post('https://api.openai.com/v1/embeddings', $payload);
 
         try {
             $response->throw();

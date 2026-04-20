@@ -119,7 +119,9 @@ class PineconeVectorService
 
     private function dataPlaneUrl(string $path): string
     {
-        $host = rtrim((string) config('pinecone.index_host'), '/');
+        $host = trim((string) config('pinecone.index_host'));
+        $host = preg_replace('#^https?://#i', '', $host) ?? $host;
+        $host = rtrim($host, '/');
 
         return 'https://'.$host.$path;
     }

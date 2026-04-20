@@ -17,6 +17,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | CV Upload Disk
+    |--------------------------------------------------------------------------
+    |
+    | Resume uploads should use an explicit disk so they do not accidentally
+    | depend on the application's default filesystem disk.
+    |
+    */
+
+    'cv_upload_disk' => env('CV_UPLOAD_DISK', 'cv_uploads'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -55,12 +67,29 @@ return [
             // Prefer an access point ARN here when using S3 Access Points:
             // arn:aws:s3:REGION:ACCOUNT_ID:accesspoint/AP_NAME
             // Otherwise use the bucket name.
-            'bucket' => env('AWS_BUCKET_ACCESS_POINT_ARN', env('AWS_BUCKET')),
+            'bucket' => env('AWS_BUCKET_ACCESS_POINT_ARN') ?: env('AWS_BUCKET'),
             // Optional public base URL for Storage::url() (often CloudFront or a static site domain).
             'url' => env('AWS_URL'),
             // Optional custom S3-compatible endpoint (MinIO, LocalStack, etc.). Leave empty for real AWS.
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'cv_uploads' => [
+            'driver' => 's3',
+            'key' => env('CV_UPLOAD_AWS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('CV_UPLOAD_AWS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('CV_UPLOAD_AWS_DEFAULT_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('CV_UPLOAD_AWS_BUCKET')
+                ?: (env('AWS_BUCKET_ACCESS_POINT_ARN') ?: env('AWS_BUCKET')),
+            'url' => env('CV_UPLOAD_AWS_URL', env('AWS_URL')),
+            'endpoint' => env('CV_UPLOAD_AWS_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env(
+                'CV_UPLOAD_AWS_USE_PATH_STYLE_ENDPOINT',
+                env('AWS_USE_PATH_STYLE_ENDPOINT', false)
+            ),
             'throw' => false,
             'report' => false,
         ],

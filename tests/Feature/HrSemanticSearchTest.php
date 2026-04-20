@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 
 test('hr can keyword search extracted cv text', function () {
     fakeVectorSearchStack();
@@ -33,6 +34,7 @@ test('hr can keyword search extracted cv text', function () {
 
 test('cv upload dispatches processing job', function () {
     Queue::fake();
+    Storage::fake('cv_uploads');
 
     $organization = Organization::factory()->create(['slug' => 'upload-test']);
     $file = UploadedFile::fake()->create('resume.pdf', 120, 'application/pdf');

@@ -11,6 +11,7 @@ use App\Models\CandidateDocument;
 use App\Models\Organization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Throwable;
 
 class AgencyPortalController extends Controller
 {
@@ -24,8 +25,24 @@ class AgencyPortalController extends Controller
     public function store(StoreCandidateCvRequest $request, Organization $organization): RedirectResponse
     {
         $file = $request->file('cv');
-        $disk = (string) config('filesystems.default', 'local');
-        $path = $file->store("cvs/organization-{$organization->id}", $disk);
+        $disk = (string) config('filesystems.cv_upload_disk', 'cv_uploads');
+        try {
+            $path = $file->store("cvs/organization-{$organization->id}", $disk);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->withErrors(['cv' => __('CV upload failed. Please try again in a moment.')]);
+        }
+
+        if (! is_string($path) || $path === '') {
+            report(new \RuntimeException("CV upload failed on disk [{$disk}] for organization [{$organization->id}]"));
+
+            return back()
+                ->withInput()
+                ->withErrors(['cv' => __('CV upload failed. Please try again in a moment.')]);
+        }
 
         $candidate = Candidate::query()->create([
             'organization_id' => $organization->id,
