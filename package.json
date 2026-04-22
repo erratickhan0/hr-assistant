@@ -7,6 +7,9 @@
         "npm": ">=10"
     },
     "scripts": {
+        "preinstall": "node -e \"const [maj,min]=process.versions.node.split('.').map(Number); if (maj<20 || (maj===20 && min<19)) { console.error('Node 20.19+ is required. Run: nvm use 20'); process.exit(1); }\"",
+        "predev": "node -e \"const [maj,min]=process.versions.node.split('.').map(Number); if (maj<20 || (maj===20 && min<19)) { console.error('Node 20.19+ is required. Run: nvm use 20'); process.exit(1); }\"",
+        "prebuild": "node -e \"const [maj,min]=process.versions.node.split('.').map(Number); if (maj<20 || (maj===20 && min<19)) { console.error('Node 20.19+ is required. Run: nvm use 20'); process.exit(1); }\"",
         "build": "vite build",
         "dev": "vite"
     },

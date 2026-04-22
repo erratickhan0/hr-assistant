@@ -6,6 +6,7 @@ use App\Models\CandidateDocument;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class HrCandidateSearchService
@@ -40,63 +41,68 @@ class HrCandidateSearchService
         if ($this->openai->isConfigured() && $this->pinecone->isConfigured()) {
             try {
                 $vector = $this->openai->embed($query);
-                $filter = [
+                $matches = $this->pinecone->query($vector, $limit, null, [
                     'organization_id' => ['$eq' => $organization->id],
-                ];
-                $matches = $this->pinecone->query($vector, $limit, null, $filter);
+                ]);
 
                 $idScores = [];
                 foreach ($matches as $match) {
                     $meta = $match['metadata'] ?? [];
                     if (isset($meta['candidate_document_id']) && is_numeric($meta['candidate_document_id'])) {
-                        $id = (int) $meta['candidate_document_id'];
-                        $idScores[$id] = $match['score'];
+                        $idScores[(int) $meta['candidate_document_id']] = (float) ($match['score'] ?? 0.0);
                     }
                 }
 
-                if ($idScores === []) {
-                    return [];
-                }
+                if ($idScores !== []) {
+                    $ids = array_keys($idScores);
+                    $documents = CandidateDocument::query()
+                        ->whereIn('id', $ids)
+                        ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
+                        ->with('candidate')
+                        ->get()
+                        ->keyBy('id');
 
-                $ids = array_keys($idScores);
-                $documents = CandidateDocument::query()
-                    ->whereIn('id', $ids)
-                    ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
-                    ->with('candidate')
-                    ->get()
-                    ->keyBy('id');
-
-                $ordered = [];
-                foreach ($ids as $id) {
-                    $doc = $documents->get($id);
-                    if ($doc !== null) {
-                        $ordered[] = [
-                            'document' => $doc,
-                            'score' => $idScores[$id] ?? null,
-                        ];
+                    $ordered = [];
+                    foreach ($ids as $id) {
+                        $doc = $documents->get($id);
+                        if ($doc !== null) {
+                            $ordered[] = [
+                                'document' => $doc,
+                                'score' => $idScores[$id] ?? null,
+                            ];
+                        }
                     }
-                }
 
-                return $ordered;
+                    return $ordered;
+                }
             } catch (Throwable $e) {
                 Log::warning('hr_search.vector_failed', ['message' => $e->getMessage()]);
             }
         }
 
-        return $this->keywordFallbackWithScores($organization, $query, $limit);
+        return $this->resumeNameSearchWithScores($organization, $query, $limit);
     }
 
     /**
      * @return list<array{document: CandidateDocument, score: float|null}>
      */
-    private function keywordFallbackWithScores(Organization $organization, string $query, int $limit): array
+    private function resumeNameSearchWithScores(Organization $organization, string $query, int $limit): array
     {
-        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query);
-        $needle = '%'.$escaped.'%';
+        $terms = $this->tokenizeQuery($query);
+        if ($terms === []) {
+            return [];
+        }
+
+        $phrase = mb_strtolower($query);
 
         $documents = CandidateDocument::query()
             ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
-            ->where('original_name', 'like', $needle)
+            ->where(function ($q) use ($terms): void {
+                foreach ($terms as $term) {
+                    $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term);
+                    $q->whereRaw('LOWER(original_name) like ?', ['%'.$escaped.'%']);
+                }
+            })
             ->with('candidate')
             ->latest('updated_at')
             ->limit($limit)
@@ -104,9 +110,43 @@ class HrCandidateSearchService
 
         $out = [];
         foreach ($documents as $document) {
-            $out[] = ['document' => $document, 'score' => null];
+            $name = mb_strtolower($document->original_name);
+            $termHits = 0;
+            foreach ($terms as $term) {
+                if (str_contains($name, $term)) {
+                    $termHits++;
+                }
+            }
+
+            $score = (float) $termHits;
+            if (str_contains($name, $phrase)) {
+                $score += 2.0;
+            }
+            if (Str::startsWith($name, $terms[0])) {
+                $score += 0.5;
+            }
+
+            $out[] = ['document' => $document, 'score' => $score];
         }
 
-        return $out;
+        usort($out, fn (array $a, array $b): int => ($b['score'] <=> $a['score']));
+
+        return array_values($out);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function tokenizeQuery(string $query): array
+    {
+        $parts = preg_split('/[^a-z0-9]+/i', mb_strtolower(trim($query))) ?: [];
+        $tokens = [];
+        foreach ($parts as $part) {
+            if (mb_strlen($part) >= 2) {
+                $tokens[] = $part;
+            }
+        }
+
+        return array_values(array_unique($tokens));
     }
 }

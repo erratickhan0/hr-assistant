@@ -35,8 +35,20 @@ class ProcessCvUploadJob implements ShouldQueue
     ): void {
         $document = $this->document->fresh(['candidate']);
         if ($document === null || $document->candidate === null) {
+            Log::warning('process_cv_upload_skipped_missing_document_or_candidate', [
+                'document_id' => $this->document->id ?? null,
+            ]);
+
             return;
         }
+
+        $context = [
+            'document_id' => $document->id,
+            'candidate_id' => $document->candidate_id,
+            'organization_id' => $document->candidate->organization_id,
+        ];
+
+        Log::info('process_cv_upload_started', $context);
 
         $document->forceFill([
             'processing_status' => CandidateDocumentProcessingStatus::Processing,
@@ -59,11 +71,17 @@ class ProcessCvUploadJob implements ShouldQueue
                 }
             }
 
+            Log::info('process_cv_upload_text_extracted', $context + [
+                'text_length' => mb_strlen($text),
+            ]);
+
             if ($text === '') {
                 $document->forceFill([
                     'processing_status' => CandidateDocumentProcessingStatus::Failed,
                     'last_error' => 'No text could be extracted from this file.',
                 ])->save();
+
+                Log::warning('process_cv_upload_failed_empty_text', $context);
 
                 return;
             }
@@ -84,12 +102,18 @@ class ProcessCvUploadJob implements ShouldQueue
                 'extracted_text_path' => $extractedRelativePath,
             ])->save();
 
+            Log::info('process_cv_upload_text_stored', $context + [
+                'extracted_text_path' => $extractedRelativePath,
+            ]);
+
             if (! $openai->isConfigured() || ! $pinecone->isConfigured()) {
                 $document->forceFill([
                     'processing_status' => CandidateDocumentProcessingStatus::Ready,
                     'pinecone_vector_id' => null,
                     'last_error' => 'OpenAI/Pinecone not configured — extracted text stored on object storage only.',
                 ])->save();
+
+                Log::warning('process_cv_upload_skipped_vector_indexing_not_configured', $context);
 
                 return;
             }
@@ -98,10 +122,20 @@ class ProcessCvUploadJob implements ShouldQueue
             $orgId = $document->candidate->organization_id;
             $vectorId = 'org-'.$orgId.'-doc-'.$document->id;
 
+            Log::info('process_cv_upload_embedding_generated', $context + [
+                'embedding_model' => (string) config('openai.embedding_model'),
+                'embedding_dimensions' => count($vector),
+                'vector_id' => $vectorId,
+            ]);
+
             $pinecone->upsert($vectorId, $vector, [
                 'organization_id' => $orgId,
                 'candidate_id' => $document->candidate_id,
                 'candidate_document_id' => $document->id,
+            ]);
+
+            Log::info('process_cv_upload_pinecone_upserted', $context + [
+                'vector_id' => $vectorId,
             ]);
 
             $document->forceFill([
@@ -112,6 +146,10 @@ class ProcessCvUploadJob implements ShouldQueue
                 'indexed_at' => now(),
                 'last_error' => null,
             ])->save();
+
+            Log::info('process_cv_upload_completed', $context + [
+                'vector_id' => $vectorId,
+            ]);
         } catch (Throwable $e) {
             Log::error('process_cv_upload_failed', [
                 'document_id' => $document->id,

@@ -18,17 +18,14 @@ class DashboardController extends Controller
             abort(403);
         }
 
-        $candidates = Candidate::query()
-            ->where('organization_id', $organization->id)
-            ->with(['documents' => fn ($q) => $q->latest()])
-            ->latest()
-            ->paginate(15);
-
         $searchQuery = $request->session()->get('search_query');
         $searchResultIds = $request->session()->get('search_result_ids');
+        $searchMode = $request->session()->get('search_mode');
+        $searchEvidence = $request->session()->get('search_evidence');
+        $searchAnswer = $request->session()->get('search_answer');
 
         $searchResults = null;
-        if (is_array($searchResultIds) && $searchResultIds !== []) {
+        if ($searchMode === 'semantic_text' && is_array($searchResultIds) && $searchResultIds !== []) {
             $searchResults = CandidateDocument::query()
                 ->whereIn('id', $searchResultIds)
                 ->whereHas('candidate', fn ($q) => $q->where('organization_id', $organization->id))
@@ -40,9 +37,10 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'organization' => $organization,
-            'candidates' => $candidates,
             'searchQuery' => is_string($searchQuery) ? $searchQuery : null,
             'searchResults' => $searchResults,
+            'searchEvidence' => is_array($searchEvidence) ? $searchEvidence : [],
+            'searchAnswer' => is_string($searchAnswer) ? $searchAnswer : null,
         ]);
     }
 }

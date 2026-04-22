@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Auth\RegisteredOrganizationController;
 use App\Http\Controllers\Auth\SessionController;
+use App\Http\Controllers\CandidateDocumentDownloadController;
+use App\Http\Controllers\CandidateIndexController;
+use App\Http\Controllers\ClearDashboardSearchController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HrSemanticSearchController;
 use App\Http\Controllers\Public\AgencyPortalController;
@@ -25,6 +28,11 @@ Route::post('/logout', [SessionController::class, 'destroy'])
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::post('/dashboard/search/clear', ClearDashboardSearchController::class)
+        ->name('hr.search.clear');
+    Route::get('/candidates', CandidateIndexController::class)->name('candidates.index');
+    Route::get('/documents/{document}/download', CandidateDocumentDownloadController::class)
+        ->name('documents.download');
     Route::post('/dashboard/search', HrSemanticSearchController::class)
         ->middleware('throttle:20,1')
         ->name('hr.search');

@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use OpenAI\Laravel\Facades\OpenAI;
 use RuntimeException;
+use Throwable;
 
 class OpenAIEmbeddingService
 {
@@ -28,27 +28,23 @@ class OpenAIEmbeddingService
         $dimensions = (int) config('openai.embedding_dimensions', 512);
         $truncated = Str::limit($input, 28_000, '');
 
-        $payload = [
-            'model' => $model,
-            'input' => $truncated,
-        ];
-
-        if ($dimensions > 0) {
-            $payload['dimensions'] = $dimensions;
-        }
-
-        $response = Http::withToken((string) config('openai.api_key'))
-            ->timeout(120)
-            ->post('https://api.openai.com/v1/embeddings', $payload);
-
         try {
-            $response->throw();
-        } catch (RequestException $e) {
-            Log::error('openai.embeddings_failed', ['body' => $response->body()]);
+            $payload = [
+                'model' => $model,
+                'input' => $truncated,
+            ];
+
+            if ($dimensions > 0) {
+                $payload['dimensions'] = $dimensions;
+            }
+
+            $response = OpenAI::embeddings()->create($payload);
+        } catch (Throwable $e) {
+            Log::error('openai.embeddings_failed', ['message' => $e->getMessage()]);
             throw $e;
         }
 
-        $embedding = $response->json('data.0.embedding');
+        $embedding = $response->embeddings[0]->embedding ?? null;
 
         if (! is_array($embedding)) {
             throw new RuntimeException('OpenAI embeddings response missing data.');

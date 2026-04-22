@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\CandidateDocument;
+use App\Services\HrCandidateSearchService;
+use App\Services\OpenAICvAnswerService;
+use App\Services\OpenAIEmbeddingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
@@ -54,18 +57,36 @@ function fakeVectorSearchStack(): void
     Config::set('pinecone.api_key', 'test-pinecone-key');
     Config::set('pinecone.index_host', 'test-index-host.pinecone.io');
 
+    app()->bind(OpenAIEmbeddingService::class, fn (): OpenAIEmbeddingService => new class extends OpenAIEmbeddingService
+    {
+        public function isConfigured(): bool
+        {
+            return true;
+        }
+
+        public function embed(string $input): array
+        {
+            return array_fill(0, 512, 0.01);
+        }
+    });
+
+    app()->bind(OpenAICvAnswerService::class, fn (): OpenAICvAnswerService => new class extends OpenAICvAnswerService
+    {
+        public function isConfigured(): bool
+        {
+            return true;
+        }
+
+        public function answerForDocuments(string $query, iterable $documents, int $maxDocuments = 5): ?string
+        {
+            return 'Test grounded answer based on the CV excerpts provided.';
+        }
+    });
+
+    app()->forgetInstance(HrCandidateSearchService::class);
+
     Http::fake(function ($request) {
         $url = (string) $request->url();
-
-        if (str_contains($url, 'api.openai.com/v1/embeddings')) {
-            return Http::response([
-                'data' => [
-                    [
-                        'embedding' => array_fill(0, 1536, 0.01),
-                    ],
-                ],
-            ], 200);
-        }
 
         if (str_contains($url, '/query')) {
             $payload = $request->data();

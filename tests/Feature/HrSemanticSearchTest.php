@@ -11,12 +11,10 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 test('hr can keyword search extracted cv text', function () {
-    fakeVectorSearchStack();
-
     $organization = Organization::factory()->create();
     $user = User::factory()->for($organization)->create();
     $candidate = Candidate::factory()->for($organization)->create();
-    CandidateDocument::factory()->for($candidate)->create([
+    $document = CandidateDocument::factory()->for($candidate)->create([
         'original_name' => 'Senior-Laravel-engineer-resume.pdf',
         'processing_status' => CandidateDocumentProcessingStatus::Ready,
     ]);
@@ -24,11 +22,14 @@ test('hr can keyword search extracted cv text', function () {
     $this->actingAs($user)
         ->post(route('hr.search'), ['q' => 'Laravel'])
         ->assertRedirect(route('dashboard'))
-        ->assertSessionHas('search_query');
+        ->assertSessionHas('search_query')
+        ->assertSessionHas('search_mode', 'semantic_text')
+        ->assertSessionHas('search_result_ids.0', $document->id);
 
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
+        ->assertSee('semantic search', false)
         ->assertSee('Senior-Laravel-engineer-resume.pdf', false);
 });
 

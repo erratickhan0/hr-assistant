@@ -24,6 +24,12 @@
                     >
                         Dashboard
                     </a>
+                    <a
+                        href="{{ route('candidates.index') }}"
+                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                        Candidates
+                    </a>
                     @if (auth()->user()->organization)
                         <a
                             href="{{ route('agency.portal', auth()->user()->organization) }}"
