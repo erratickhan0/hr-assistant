@@ -2,6 +2,7 @@
 
 @section('title', $organization->name.' — Submit CV')
 @section('hide_guest_auth_links', '1')
+@section('hide_logout_button', '1')
 
 @section('content')
     <div class="mx-auto max-w-lg space-y-8">

@@ -11,6 +11,14 @@
             Register an agency, share your public portal link, collect CVs, then review uploads from the dashboard.
             Semantic search &amp; Pinecone wiring come next.
         </p>
+        <div class="flex flex-wrap gap-2 text-sm">
+            <a
+                href="{{ route('pages.how-it-works') }}"
+                class="rounded-md border border-slate-700 px-3 py-1.5 text-slate-300 hover:bg-slate-900 hover:text-white"
+            >
+                How it works
+            </a>
+        </div>
         <div class="flex flex-wrap gap-3">
             @auth
                 <a

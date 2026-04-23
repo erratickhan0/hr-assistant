@@ -19,6 +19,12 @@
             <nav class="flex flex-wrap items-center gap-2 text-sm">
                 @auth
                     <a
+                        href="{{ route('pages.how-it-works') }}"
+                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                        How it works
+                    </a>
+                    <a
                         href="{{ route('dashboard') }}"
                         class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
                     >
@@ -40,16 +46,24 @@
                             Public portal
                         </a>
                     @endif
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button
-                            type="submit"
-                            class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                        >
-                            Log out
-                        </button>
-                    </form>
+                    @unless (View::hasSection('hide_logout_button'))
+                        <form method="POST" action="{{ route('logout') }}" class="inline">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                            >
+                                Log out
+                            </button>
+                        </form>
+                    @endunless
                 @else
+                    <a
+                        href="{{ route('pages.how-it-works') }}"
+                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                        How it works
+                    </a>
                     @unless (View::hasSection('hide_guest_auth_links'))
                         <a
                             href="{{ route('login') }}"

@@ -12,7 +12,12 @@
         </div>
 
         <section class="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
-            <form method="GET" action="{{ route('candidates.index') }}" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <form
+                id="candidates-search-form"
+                method="GET"
+                action="{{ route('candidates.index') }}"
+                class="flex flex-col gap-3 sm:flex-row sm:items-end"
+            >
                 <div class="flex-1">
                     <label for="q" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Search by name, email, or resume name</label>
                     <input
@@ -26,9 +31,17 @@
                 </div>
                 <button
                     type="submit"
+                    id="candidates-search-submit"
                     class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
                 >
-                    Search
+                    <span id="candidates-search-submit-text">Search</span>
+                    <span id="candidates-search-submit-loading" class="hidden items-center gap-2">
+                        <svg class="size-4 animate-spin text-slate-950" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                            <path class="opacity-100" d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
+                        </svg>
+                        <span>Searching...</span>
+                    </span>
                 </button>
                 @if ($search)
                     <a
@@ -65,12 +78,22 @@
                                     <span class="mt-0.5 inline-block rounded bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
                                         {{ $doc->processing_status->value }}
                                     </span>
-                                    <a
-                                        href="{{ route('documents.download', $doc) }}"
-                                        class="mt-2 inline-block text-[11px] text-emerald-400 hover:text-emerald-300"
-                                    >
-                                        View / download
-                                    </a>
+                                    <div class="mt-2 flex items-center justify-end gap-3">
+                                        <a
+                                            href="{{ route('documents.view', $doc) }}"
+                                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
+                                            target="_blank"
+                                            rel="noopener"
+                                        >
+                                            View
+                                        </a>
+                                        <a
+                                            href="{{ route('documents.download', $doc) }}"
+                                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
+                                        >
+                                            Download
+                                        </a>
+                                    </div>
                                 @else
                                     <span>No file</span>
                                 @endif
@@ -84,4 +107,25 @@
             @endif
         </section>
     </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById('candidates-search-form');
+            const submitButton = document.getElementById('candidates-search-submit');
+            const submitText = document.getElementById('candidates-search-submit-text');
+            const loadingState = document.getElementById('candidates-search-submit-loading');
+
+            if (!form || !submitButton || !submitText || !loadingState) {
+                return;
+            }
+
+            form.addEventListener('submit', function () {
+                submitButton.setAttribute('disabled', 'disabled');
+                submitButton.classList.add('opacity-70', 'cursor-not-allowed');
+                submitText.classList.add('hidden');
+                loadingState.classList.remove('hidden');
+                loadingState.classList.add('inline-flex');
+            });
+        })();
+    </script>
 @endsection
