@@ -3,15 +3,13 @@
 @section('title', 'Candidates — '.config('app.name'))
 
 @section('content')
-    <div class="space-y-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-semibold text-white">Candidates</h1>
-                <p class="mt-1 text-sm text-slate-400">{{ $organization->name }}</p>
-            </div>
-        </div>
+    <div class="space-y-8">
+        <x-page-header
+            title="Candidates"
+            :lead="$organization->name"
+        />
 
-        <section class="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+        <section class="app-card">
             <form
                 id="candidates-search-form"
                 method="GET"
@@ -19,24 +17,20 @@
                 class="flex flex-col gap-3 sm:flex-row sm:items-end"
             >
                 <div class="flex-1">
-                    <label for="q" class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Search by name, email, or resume name</label>
+                    <label for="q" class="form-label">Search by name, email, or file name</label>
                     <input
                         id="q"
                         name="q"
                         type="text"
                         value="{{ $search ?? '' }}"
-                        placeholder='e.g. "carpenter", "jamie@example.test", or "resume"'
-                        class="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="e.g. carpenter, jamie@example.com, resume"
+                        class="form-input"
                     />
                 </div>
-                <button
-                    type="submit"
-                    id="candidates-search-submit"
-                    class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400"
-                >
+                <button type="submit" id="candidates-search-submit" class="btn-primary">
                     <span id="candidates-search-submit-text">Search</span>
                     <span id="candidates-search-submit-loading" class="hidden items-center gap-2">
-                        <svg class="size-4 animate-spin text-slate-950" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <svg class="size-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
                             <path class="opacity-100" d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path>
                         </svg>
@@ -44,64 +38,45 @@
                     </span>
                 </button>
                 @if ($search)
-                    <a
-                        href="{{ route('candidates.index') }}"
-                        class="rounded-md border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800"
-                    >
-                        Clear
-                    </a>
+                    <a href="{{ route('candidates.index') }}" class="btn-secondary">Clear</a>
                 @endif
             </form>
         </section>
 
         <section>
             @if ($candidates->isEmpty())
-                <p class="text-sm text-slate-500">No candidates found.</p>
+                <div class="rounded-xl border border-dashed border-slate-700/80 bg-slate-900/20 px-6 py-12 text-center">
+                    <p class="text-sm text-slate-400">No candidates found.</p>
+                    <p class="mt-1 text-xs text-slate-500">Share your portal link to start receiving CVs.</p>
+                </div>
             @else
-                <ul class="divide-y divide-slate-800 rounded-lg border border-slate-800">
+                <ul class="list-panel">
                     @foreach ($candidates as $candidate)
-                        <li class="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <li class="list-panel-row">
                             <div>
                                 <p class="font-medium text-slate-100">
                                     {{ $candidate->display_name ?: 'Unnamed candidate' }}
                                 </p>
-                                <p class="text-xs text-slate-500">
-                                    {{ $candidate->email ?: '—' }} · {{ $candidate->created_at->diffForHumans() }}
+                                <p class="mt-1 text-xs text-slate-500">
+                                    {{ $candidate->email ?: 'No email' }} · {{ $candidate->created_at->diffForHumans() }}
                                 </p>
                             </div>
-                            <div class="text-right text-xs text-slate-400">
+                            <div class="text-left sm:text-right">
                                 @if ($candidate->documents->isNotEmpty())
                                     @php
                                         $doc = $candidate->documents->first();
                                     @endphp
-                                    <span class="block">{{ $doc->original_name }}</span>
-                                    <span class="mt-0.5 inline-block rounded bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
-                                        {{ $doc->processing_status->value }}
-                                    </span>
-                                    <div class="mt-2 flex items-center justify-end gap-3">
-                                        <a
-                                            href="{{ route('documents.view', $doc) }}"
-                                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
-                                            target="_blank"
-                                            rel="noopener"
-                                        >
-                                            View
-                                        </a>
-                                        <a
-                                            href="{{ route('documents.download', $doc) }}"
-                                            class="text-[11px] text-emerald-400 hover:text-emerald-300"
-                                        >
-                                            Download
-                                        </a>
-                                    </div>
+                                    <p class="text-xs text-slate-400">{{ $doc->original_name }}</p>
+                                    <x-status-badge :status="$doc->processing_status" class="mt-2" />
+                                    <x-document-actions :document="$doc" class="mt-2 justify-start sm:justify-end" />
                                 @else
-                                    <span>No file</span>
+                                    <span class="text-xs text-slate-500">No file attached</span>
                                 @endif
                             </div>
                         </li>
                     @endforeach
                 </ul>
-                <div class="mt-4">
+                <div class="mt-6">
                     {{ $candidates->links() }}
                 </div>
             @endif

@@ -10,94 +10,62 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 </head>
-<body class="min-h-screen bg-slate-950 font-sans text-slate-100 antialiased">
-    <header class="border-b border-slate-800/80">
-        <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-            <a href="{{ route('home') }}" class="text-lg font-semibold tracking-tight text-emerald-400 hover:text-emerald-300">
-                {{ config('app.name') }}
+<body class="app-bg flex min-h-screen flex-col">
+    <header class="app-header">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+            <a href="{{ route('home') }}" class="group flex items-center gap-2.5">
+                <span class="flex size-9 items-center justify-center rounded-lg bg-emerald-500/15 ring-1 ring-emerald-500/30">
+                    <svg class="size-5 text-emerald-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+                <span class="text-lg font-semibold tracking-tight text-white group-hover:text-emerald-50">
+                    {{ config('app.name') }}
+                </span>
             </a>
-            <nav class="flex flex-wrap items-center gap-2 text-sm">
+            <nav class="flex flex-wrap items-center gap-1">
                 @auth
-                    <a
-                        href="{{ route('pages.how-it-works') }}"
-                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                    >
-                        How it works
-                    </a>
-                    <a
-                        href="{{ route('dashboard') }}"
-                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                    >
-                        Dashboard
-                    </a>
-                    <a
-                        href="{{ route('candidates.index') }}"
-                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                    >
-                        Candidates
-                    </a>
+                    <x-nav-link :href="route('pages.how-it-works')" :active="request()->routeIs('pages.how-it-works')">How it works</x-nav-link>
+                    <x-nav-link :href="route('pages.faq')" :active="request()->routeIs('pages.faq')">FAQ</x-nav-link>
+                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">Dashboard</x-nav-link>
+                    <x-nav-link :href="route('candidates.index')" :active="request()->routeIs('candidates.*')">Candidates</x-nav-link>
                     @if (auth()->user()->organization)
-                        <a
-                            href="{{ route('agency.portal', auth()->user()->organization) }}"
-                            class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
+                        <x-nav-link
+                            :href="route('agency.portal', auth()->user()->organization)"
+                            :active="request()->routeIs('agency.*')"
                             target="_blank"
                             rel="noopener"
                         >
-                            Public portal
-                        </a>
+                            Portal
+                        </x-nav-link>
                     @endif
                     @unless (View::hasSection('hide_logout_button'))
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
+                        <form method="POST" action="{{ route('logout') }}" class="ml-1 inline">
                             @csrf
-                            <button
-                                type="submit"
-                                class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                            >
-                                Log out
-                            </button>
+                            <button type="submit" class="nav-link">Log out</button>
                         </form>
                     @endunless
                 @else
-                    <a
-                        href="{{ route('pages.how-it-works') }}"
-                        class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                    >
-                        How it works
-                    </a>
+                    <x-nav-link :href="route('pages.how-it-works')" :active="request()->routeIs('pages.how-it-works')">How it works</x-nav-link>
+                    <x-nav-link :href="route('pages.faq')" :active="request()->routeIs('pages.faq')">FAQ</x-nav-link>
                     @unless (View::hasSection('hide_guest_auth_links'))
-                        <a
-                            href="{{ route('login') }}"
-                            class="rounded-md px-3 py-1.5 text-slate-300 hover:bg-slate-800 hover:text-white"
-                        >
-                            Log in
-                        </a>
-                        <a
-                            href="{{ route('register') }}"
-                            class="rounded-md bg-emerald-500 px-3 py-1.5 font-medium text-slate-950 hover:bg-emerald-400"
-                        >
-                            Create agency
-                        </a>
+                        <x-nav-link :href="route('login')" :active="request()->routeIs('login')">Log in</x-nav-link>
+                        <a href="{{ route('register') }}" class="btn-primary ml-1">Create agency</a>
                     @endunless
                 @endauth
             </nav>
         </div>
     </header>
 
-    <main class="mx-auto max-w-5xl px-4 py-10">
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         @if (session('status'))
-            <div
-                class="mb-6 rounded-lg border border-emerald-700/40 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-100"
-                role="status"
-            >
+            <div class="alert-success mb-8" role="status">
                 {{ session('status') }}
             </div>
         @endif
 
         @if ($errors->any())
-            <div
-                class="mb-6 rounded-lg border border-red-800/60 bg-red-950/40 px-4 py-3 text-sm text-red-100"
-                role="alert"
-            >
+            <div class="alert-error mb-8" role="alert">
                 <p class="mb-2 font-medium">Please fix the following:</p>
                 <ul class="list-inside list-disc space-y-1">
                     @foreach ($errors->all() as $error)
@@ -109,5 +77,18 @@
 
         @yield('content')
     </main>
+
+    <footer class="mt-auto border-t border-slate-800/60 bg-slate-950/50">
+        <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <p>&copy; {{ date('Y') }} {{ config('app.name') }}. Built for recruitment teams.</p>
+            <div class="flex flex-wrap gap-4">
+                <a href="{{ route('pages.how-it-works') }}" class="transition hover:text-slate-300">How it works</a>
+                <a href="{{ route('pages.faq') }}" class="transition hover:text-slate-300">FAQ</a>
+                @guest
+                    <a href="{{ route('login') }}" class="transition hover:text-slate-300">Log in</a>
+                @endguest
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

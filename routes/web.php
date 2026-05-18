@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
 Route::view('/how-it-works', 'pages.how-it-works')->name('pages.how-it-works');
+Route::view('/faq', 'pages.faq')->name('pages.faq');
 
 Route::get('/register', [RegisteredOrganizationController::class, 'create'])->name('register');
 Route::post('/register', [RegisteredOrganizationController::class, 'store'])
@@ -38,7 +39,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/documents/{document}/download', CandidateDocumentDownloadController::class)
         ->name('documents.download');
     Route::post('/dashboard/search', HrSemanticSearchController::class)
-        ->middleware('throttle:20,1')
+        ->middleware('throttle:25,1')
         ->name('hr.search');
 });
 

@@ -13,10 +13,15 @@ class CandidateDocumentViewController extends Controller
     {
         $this->authorize('view', $document);
 
+        $filename = str_replace(['"', '\\'], '', $document->original_name);
+
         return Storage::disk($document->disk)->response(
             $document->path,
             $document->original_name,
-            [],
+            [
+                'Content-Type' => $document->mime,
+                'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            ],
             'inline',
         );
     }

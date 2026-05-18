@@ -6,6 +6,8 @@ use App\Models\Candidate;
 use App\Models\CandidateDocument;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\HrCandidateSearchService;
+use App\Services\OpenAICvAnswerService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -29,8 +31,32 @@ test('hr can keyword search extracted cv text', function () {
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('semantic search', false)
+        ->assertSee('Search CVs', false)
         ->assertSee('Senior-Laravel-engineer-resume.pdf', false);
+});
+
+test('semantic search is throttled to twenty five requests per minute', function () {
+    $organization = Organization::factory()->create();
+    $user = User::factory()->for($organization)->create();
+
+    $this->mock(HrCandidateSearchService::class, function ($mock): void {
+        $mock->shouldReceive('searchWithScores')->andReturn([]);
+    });
+
+    $this->mock(OpenAICvAnswerService::class, function ($mock): void {
+        $mock->shouldReceive('evidenceForDocuments')->andReturn([]);
+        $mock->shouldReceive('isConfigured')->andReturn(false);
+    });
+
+    for ($i = 0; $i < 25; $i++) {
+        $this->actingAs($user)
+            ->post(route('hr.search'), ['q' => 'query '.$i])
+            ->assertRedirect(route('dashboard'));
+    }
+
+    $this->actingAs($user)
+        ->post(route('hr.search'), ['q' => 'query 26'])
+        ->assertTooManyRequests();
 });
 
 test('cv upload dispatches processing job', function () {

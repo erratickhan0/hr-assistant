@@ -64,4 +64,9 @@ class CandidateDocument extends Model
     {
         return $this->belongsTo(Candidate::class);
     }
+
+    public function isViewableInBrowser(): bool
+    {
+        return str_contains(strtolower($this->mime), 'pdf');
+    }
 }

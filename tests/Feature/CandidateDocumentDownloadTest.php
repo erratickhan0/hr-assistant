@@ -46,7 +46,8 @@ test('organization user can view own candidate document inline', function () {
     $this->actingAs($user)
         ->get(route('documents.view', $document))
         ->assertSuccessful()
-        ->assertHeader('content-disposition', 'inline; filename=resume.pdf');
+        ->assertHeader('content-disposition', 'inline; filename="resume.pdf"')
+        ->assertHeader('content-type', 'application/pdf');
 });
 
 test('organization user cannot download another organization document', function () {
