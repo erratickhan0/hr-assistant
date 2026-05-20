@@ -90,5 +90,8 @@
             </div>
         </div>
     </footer>
+    @if (request()->routeIs('home', 'pages.how-it-works', 'pages.faq', 'agency.portal'))
+        <script src="https://customer-support.tech-gap.com/widget.js" data-api-key="wk_live_T47unUeexxL2E4vkP7gifXj9rGJZuf7AmFyZSTzr" async></script>
+    @endif
 </body>
 </html>
