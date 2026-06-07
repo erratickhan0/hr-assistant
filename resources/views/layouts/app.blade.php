@@ -78,6 +78,8 @@
         @yield('content')
     </main>
 
+    @stack('scripts')
+
     <footer class="mt-auto border-t border-slate-800/60 bg-slate-950/50">
         <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
             <p>&copy; {{ date('Y') }} {{ config('app.name') }}. Built for recruitment teams.</p>
